@@ -7,6 +7,7 @@ public class NetworkManager : MonoBehaviour
 {
 	
 		public Transform player;
+		public Transform cpuPlayer;
 		string registeredName = "somekindofuniquename";
 		float refreshRequestLength = 3.0f;
 		HostData[] hostData;
@@ -24,6 +25,10 @@ public class NetworkManager : MonoBehaviour
 				if (Network.isServer) {
 						myPlayer = Network.player;
 						makePlayer (myPlayer);
+						
+						for (int i = 0; i < 4; ++i) {
+								makeCPUPlayer ();
+						}
 				}
 		}
 	
@@ -32,15 +37,29 @@ public class NetworkManager : MonoBehaviour
 				myPlayer = Network.player;
 				networkView.RPC ("makePlayer", RPCMode.Server, myPlayer);
 		}
+
+		[RPC]
+		void makeCPUPlayer ()
+		{
+				Transform newPlayer = Network.Instantiate (cpuPlayer, transform.position, transform.rotation, 0) as Transform;
+		}
 	
 		[RPC]
 		void makePlayer (NetworkPlayer thisPlayer)
 		{
 				Transform newPlayer = Network.Instantiate (player, transform.position, transform.rotation, 0) as Transform;
+				
+				if (Network.isServer) {
+						var rigidBody = newPlayer.gameObject.AddComponent<Rigidbody> ();
+						rigidBody.freezeRotation = true;
+				}
+
 				if (thisPlayer != myPlayer) {
 						networkView.RPC ("enableCamera", thisPlayer, newPlayer.networkView.viewID);
+						//newPlayer.gameObject.AddComponent ("PlayerRemote");
 				} else {
 						enableCamera (newPlayer.networkView.viewID);
+						//newPlayer.gameObject.AddComponent ("PlayerLocal");
 				}
 		}
 	

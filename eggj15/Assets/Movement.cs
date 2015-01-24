@@ -6,34 +6,31 @@ public class Movement : MonoBehaviour
 {
 	
 		int moveSpeed = 8;
-		float horiz = 0;
-		float vert = 0;
 		public bool haveControl = false;
 	
 		void FixedUpdate ()
 		{
 				if (haveControl) {
-						vert = Input.GetAxis ("Vertical");
-						horiz = Input.GetAxis ("Horizontal");
-						Vector3 newVelocity = (transform.right * horiz * moveSpeed) + (transform.forward * vert * moveSpeed);
-						Vector3 myVelocity = rigidbody.velocity;
-						myVelocity.x = newVelocity.x;
-						myVelocity.z = newVelocity.z;
-			
-						if (myVelocity != rigidbody.velocity) {
-								if (Network.isServer) {
-										movePlayer (myVelocity);
-								} else {
-										networkView.RPC ("movePlayer", RPCMode.Server, myVelocity);
-								}
+						float vert = Input.GetAxis ("Vertical");
+						float horiz = Input.GetAxis ("Horizontal");
+
+						if (Network.isServer) {
+								movePlayer (vert, horiz);
+						} else {
+								networkView.RPC ("movePlayer", RPCMode.Server, vert, horiz);
 						}
 				}
 		}
 	
 		[RPC]
-		void movePlayer (Vector3 playerVelocity)
+		void movePlayer (float vert, float horiz)
 		{
-				rigidbody.velocity = playerVelocity;
+				Vector3 newVelocity = (transform.right * horiz * moveSpeed) + (transform.forward * vert * moveSpeed);
+				Vector3 myVelocity = rigidbody.velocity;
+				myVelocity.x = newVelocity.x;
+				myVelocity.z = newVelocity.z;
+
+				rigidbody.velocity = myVelocity;
 				networkView.RPC ("updatePlayer", RPCMode.OthersBuffered, transform.position);
 		}
 		[RPC]
