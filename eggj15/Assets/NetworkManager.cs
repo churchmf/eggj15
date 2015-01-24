@@ -5,7 +5,6 @@ using System.Collections;
 //http://createathingunity.blogspot.co.uk/
 public class NetworkManager : MonoBehaviour
 {
-	
 		public Transform player;
 		public Transform cpuPlayer;
 		string registeredName = "somekindofuniquename";
@@ -13,6 +12,13 @@ public class NetworkManager : MonoBehaviour
 		HostData[] hostData;
 		public string chosenGameName = "";
 		public NetworkPlayer myPlayer;
+		public int DEFENDER_ATTACKER_RATIO = 30;
+
+		public enum PlayerType
+		{
+				ATTACKER = 0,
+				DEFENDER
+		}
 	
 		private void StartServer ()
 		{
@@ -52,6 +58,7 @@ public class NetworkManager : MonoBehaviour
 				if (Network.isServer) {
 						var rigidBody = newPlayer.gameObject.AddComponent<Rigidbody> ();
 						rigidBody.freezeRotation = true;
+
 				}
 
 				if (thisPlayer != myPlayer) {
@@ -61,13 +68,65 @@ public class NetworkManager : MonoBehaviour
 						enableCamera (newPlayer.networkView.viewID);
 						//newPlayer.gameObject.AddComponent ("PlayerLocal");
 				}
+
+				PlayerType neededType = determineNeededRole ();
+				networkView.RPC ("setPlayerRole", RPCMode.AllBuffered, (int)neededType, newPlayer.networkView.viewID);
+		
+
+		}
+	
+		[RPC]
+		public void setPlayerRole (int neededType, NetworkViewID playerID)
+		{
+				GameObject[] players = GameObject.FindGameObjectsWithTag ("Player");
+				foreach (GameObject thisPlayer in players) {
+						if (thisPlayer.networkView.viewID == playerID) {
+								if ((PlayerType)neededType == PlayerType.ATTACKER) {
+										var component = thisPlayer.AddComponent<Attacker> ();
+										component.enabled = thisPlayer.GetComponent<Movement> ().haveControl;
+								} else {
+										var component = thisPlayer.AddComponent<Defender> ();
+										component.enabled = thisPlayer.GetComponent<Movement> ().haveControl;
+										
+								}
+								break;
+						}
+				}
+		}
+			
+		public PlayerType determineNeededRole ()
+		{
+				GameObject[] players = GameObject.FindGameObjectsWithTag ("Player");
+
+				int defenderCount = 0;
+				foreach (GameObject thisPlayer in players) {
+						if (isDefender (thisPlayer)) {
+								defenderCount++;
+						}
+				}
+
+				if (((float)defenderCount / (float)players.Length) * 100 < DEFENDER_ATTACKER_RATIO) {
+						return PlayerType.DEFENDER;
+				} else {
+						return PlayerType.ATTACKER;
+						
+				}
+		}
+
+		public bool isDefender (GameObject go)
+		{
+				return go.GetComponent<Defender> () != null;
+		}
+
+		public bool isAttacker (GameObject go)
+		{
+				return go.GetComponent<Attacker> () != null;
 		}
 	
 		[RPC]
 		void enableCamera (NetworkViewID playerID)
 		{
-				GameObject[] players;
-				players = GameObject.FindGameObjectsWithTag ("Player");
+				GameObject[] players = GameObject.FindGameObjectsWithTag ("Player");
 				foreach (GameObject thisPlayer in players) {
 						if (thisPlayer.networkView.viewID == playerID) {
 								thisPlayer.GetComponent<Movement> ().haveControl = true;

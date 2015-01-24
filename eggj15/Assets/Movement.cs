@@ -4,7 +4,6 @@ using System.Collections;
 //http://createathingunity.blogspot.co.uk/
 public class Movement : MonoBehaviour
 {
-	
 		int moveSpeed = 8;
 		public bool haveControl = false;
 	
@@ -13,7 +12,7 @@ public class Movement : MonoBehaviour
 				if (haveControl) {
 						float vert = Input.GetAxis ("Vertical");
 						float horiz = Input.GetAxis ("Horizontal");
-
+						
 						if (Network.isServer) {
 								movePlayer (vert, horiz);
 						} else {
